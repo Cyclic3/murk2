@@ -33,14 +33,6 @@ namespace murk2::aa {
     }
     return boost::multiprecision::powm(a, reps, modulus);
   }
-  bigint mod_mul_monoid::op_iter(bigint&& a, bigint const& reps) const {
-    if (reps.sign() == -1) {
-      if (!try_invert_mut(a))
-        throw missing_structure{"Tried to invert non-invertible element"};
-      return boost::multiprecision::powm(a, -reps, modulus);
-    }
-    return boost::multiprecision::powm(a, reps, modulus);
-  }
   void mod_mul_monoid::op_iter_mut(bigint& a, bigint const& reps) const {
     if (reps.sign() == -1) {
       if (!try_invert_mut(a))
@@ -104,16 +96,6 @@ namespace murk2::aa {
 //    if (reps.sign() == -1) {
 //      auto new_a = invert(a);
 //      return boost::multiprecision::powm(new_a, -reps, modulus);
-//    }
-//    return boost::multiprecision::powm(a, reps, modulus);
-  }
-  bigint mod_mul_prime_group::op_iter(bigint&& a, bigint const& reps) const {
-    mpz_powm(a.backend().data(), a.backend().data(), reps.backend().data(), modulus.backend().data());
-    return std::move(a);
-//    if (reps.sign() == -1) {
-//      if (!try_invert_mut(a))
-//        throw missing_structure{"Tried to invert non-invertible element"};
-//      return boost::multiprecision::powm(a, -reps, modulus);
 //    }
 //    return boost::multiprecision::powm(a, reps, modulus);
   }

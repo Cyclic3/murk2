@@ -9,8 +9,7 @@
 namespace murk2::aa {
   enum class elliptic_group_type {
     Generic,
-    Finite,
-    FiniteCyclic
+    Finite
   };
 
   bigint compute_elliptic_curve_group_order(bigint A, bigint B, bigint order);
@@ -21,8 +20,12 @@ namespace murk2::aa {
 
   template<typename GroundField>
   elliptic_curve_group(c3lt::managed<const GroundField> ground_field_, typename GroundField::elem_t a, typename GroundField::elem_t b) -> elliptic_curve_group<std::enable_if_t<!std::derived_from<GroundField, finite_ring<typename GroundField::elem_t>>, GroundField>>;
+  template<typename GroundField>
+  elliptic_curve_group(c3lt::managed<GroundField> ground_field_, typename GroundField::elem_t a, typename GroundField::elem_t b) -> elliptic_curve_group<std::enable_if_t<!std::derived_from<GroundField, finite_ring<typename GroundField::elem_t>>, GroundField>>;
   template<typename GroundField, int Dummy1 = 0>
   elliptic_curve_group(c3lt::managed<const GroundField> ground_field_, typename GroundField::elem_t a, typename GroundField::elem_t b) -> elliptic_curve_group<std::enable_if_t<std::derived_from<GroundField, finite_field<typename GroundField::elem_t>>, GroundField>, elliptic_group_type::Finite>;
+  template<typename GroundField, int Dummy1 = 0>
+  elliptic_curve_group(c3lt::managed<GroundField> ground_field_, typename GroundField::elem_t a, typename GroundField::elem_t b) -> elliptic_curve_group<std::enable_if_t<std::derived_from<GroundField, finite_field<typename GroundField::elem_t>>, GroundField>, elliptic_group_type::Finite>;
 
   template<typename GroundField>
   class elliptic_curve_group<GroundField, elliptic_group_type::Generic>: public virtual group<geo::affinisation_vector<GroundField, 2>> {
@@ -33,7 +36,6 @@ namespace murk2::aa {
     c3lt::managed<const GroundField> ground_field;
     typename GroundField::elem_t A;
     typename GroundField::elem_t B;
-//    geo::affinisation_vector<GroundField, 2> gen;
     geo::affinisation_vector<GroundField, 2> id;
 
   public:
@@ -111,10 +113,6 @@ namespace murk2::aa {
     inline auto operator()(typename GroundField::elem_t x, typename GroundField::elem_t y) const { return element(std::move(x), std::move(y)); }
     using group<geo::affinisation_vector<GroundField, 2>>::operator();
 
-//    geo::affinisation_vector<GroundField, 2> generator() const override;
-
-//    bigint order() const override;
-
   public:
     elliptic_curve_group(c3lt::managed<const GroundField> ground_field_, typename GroundField::elem_t a, typename GroundField::elem_t b) :
         ground_field{ground_field_},
@@ -134,34 +132,6 @@ namespace murk2::aa {
 
   public:
     elliptic_curve_group(c3lt::managed<const GroundField> ground_field, typename GroundField::elem_t a, typename GroundField::elem_t b) : elliptic_curve_group<GroundField, elliptic_group_type::Generic>{ground_field, std::move(a), std::move(b)} {}
-    virtual ~elliptic_curve_group() = default;
-  };
-
-  // TODO: work out how to fix the inheritence
-  template<typename GroundField>
-  class elliptic_curve_group<GroundField, elliptic_group_type::FiniteCyclic> : public elliptic_curve_group<GroundField, elliptic_group_type::Generic>, public virtual finite_magma<typename elliptic_curve_group<GroundField>::elem_t> , public virtual cyclic_group<typename elliptic_curve_group<GroundField>::elem_t> {
-  public:
-    constexpr static elliptic_group_type type = elliptic_group_type::FiniteCyclic;
-
-  private:
-    std::optional<geo::affinisation_vector<GroundField, 2>> gen;
-
-  private:
-    geo::affinisation_vector<GroundField, 2> find_generator() const MURK2_UNIMPLEMENTED;
-
-  public:
-    bigint order() const override { return compute_elliptic_curve_group_order(this->get_A(), this->get_B(), this->get_ground_field().order()); }
-    geo::affinisation_vector<GroundField, 2> generator() const override { return gen ? *gen : find_generator(); }
-
-  public:
-    elliptic_curve_group(c3lt::managed<const GroundField> ground_field, typename GroundField::elem_t a, typename GroundField::elem_t b) :
-        elliptic_curve_group<GroundField, elliptic_group_type::Generic>{ground_field, std::move(a), std::move(b)} {}
-    elliptic_curve_group(c3lt::managed<const GroundField> ground_field, typename GroundField::elem_t a, typename GroundField::elem_t b, geo::affinisation_vector<GroundField, 2> gen_) :
-        elliptic_curve_group<GroundField, elliptic_group_type::Generic>{ground_field, std::move(a), std::move(b)},
-        gen{gen_} {}
-    elliptic_curve_group(c3lt::managed<const GroundField> ground_field, typename GroundField::elem_t a, typename GroundField::elem_t b, std::array<typename GroundField::elem_t, 2> gen_) :
-        elliptic_curve_group<GroundField, elliptic_group_type::Generic>{ground_field, std::move(a), std::move(b)},
-        gen{geo::vector<GroundField, 2>{ground_field, gen_}} {}
     virtual ~elliptic_curve_group() = default;
   };
 }

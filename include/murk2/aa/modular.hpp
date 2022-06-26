@@ -46,7 +46,6 @@ namespace murk2::aa {
   class mod_mul_monoid : public mod_mul_base {
   public:
     bigint op_iter(bigint const& a, bigint const& reps = 2) const override;
-    bigint op_iter(bigint&& a, bigint const& reps = 2) const override;
     void op_iter_mut(bigint& a, bigint const& reps = 2) const override;
 
     bool is_invertible(bigint const&) const override;
@@ -64,7 +63,6 @@ namespace murk2::aa {
 
   public:
     bigint op_iter(bigint const& a, bigint const& reps = 2) const override;
-    bigint op_iter(bigint&& a, bigint const& reps = 2) const override;
     void op_iter_mut(bigint& a, bigint const& reps = 2) const override;
 
     bigint invert(bigint const& a) const override;

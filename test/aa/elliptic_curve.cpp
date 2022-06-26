@@ -47,5 +47,4 @@ TEST(murk2aa, EllipticFiniteField) {
 }
 
 static_assert(std::remove_cvref_t<decltype(get_curve())>::type != murk2::aa::elliptic_group_type::Generic, "Elliptic curve type was incorrectly derived as Generic");
-static_assert(std::remove_cvref_t<decltype(get_curve())>::type != murk2::aa::elliptic_group_type::FiniteCyclic, "Elliptic curve type was incorrectly derived as FiniteCyclic");
 static_assert(std::remove_cvref_t<decltype(get_curve())>::type == murk2::aa::elliptic_group_type::Finite, "Elliptic curve type was incorrectly derived");

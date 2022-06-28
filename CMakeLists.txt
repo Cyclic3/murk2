@@ -5,14 +5,13 @@ set(CMAKE_CXX_STANDARD 20)
 file(GLOB_RECURSE lib_source src/*.cpp)
 file(GLOB_RECURSE lib_headers include/*.hpp)
 
-find_package(Boost REQUIRED)
 find_package(Threads REQUIRED)
 
 add_subdirectory(c3lt)
 
 add_library(murk2 ${lib_source})
 target_include_directories(murk2 PUBLIC include)
-target_link_libraries(murk2 PUBLIC c3lt Boost::headers Threads::Threads gmp)
+target_link_libraries(murk2 PUBLIC c3lt Threads::Threads gmp)
 #target_precompile_headers(murk2 PUBLIC ${lib_headers})
 
 add_library(murk2::murk2 ALIAS murk2)

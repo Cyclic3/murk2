@@ -39,6 +39,7 @@ TEST(murk2aa, ModMulInvFail) {
 
   auto three = ring(3);
 
+  EXPECT_FALSE(ring.ring_mul()->is_invertible(three.elem));
   EXPECT_FALSE(three.try_invert());
   EXPECT_THROW(three ^ -1, murk2::aa::missing_structure);
 }

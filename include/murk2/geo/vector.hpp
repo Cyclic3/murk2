@@ -2,6 +2,8 @@
 
 #include <murk2/aa/group.hpp>
 
+#include <iostream>
+
 #include <array>
 #include <variant>
 

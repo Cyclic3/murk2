@@ -4,6 +4,8 @@
 
 #include <c3lt.hpp>
 
+#include <optional>
+
 namespace murk2::aa {
   struct missing_structure : std::runtime_error {
     missing_structure(const char* msg) : std::runtime_error{msg} {};
@@ -57,9 +59,15 @@ namespace murk2::aa {
 
     virtual bool is_invertible(Element const&) const { return false; }
     virtual std::optional<Element> try_invert(Element const&) const { return std::nullopt; }
-    virtual std::optional<Element> try_invert(Element&&) const { return std::nullopt; }
+    virtual std::optional<Element> try_invert(Element&& x) const { return try_invert(x); }
     [[nodiscard]]
-    virtual bool try_invert_mut(Element&) const { return false; }
+    virtual bool try_invert_mut(Element& x) const {
+      if (auto res = try_invert(x)) {
+        x = std::move(*res);
+        return true;
+      }
+      return false;
+    }
 
     virtual ~magma() = default;
   };
@@ -78,7 +86,7 @@ namespace murk2::aa {
       // General purpose fast multiplication algorithm using doubling
 
       bigint reps_left = reps;
-      if (reps.sign() == -1) {
+      if (reps < 0) {
         if (!this->try_invert_mut(a))
           throw missing_structure{"Tried to invert non-invertible element"};
         reps_left = -reps;
@@ -96,9 +104,10 @@ namespace murk2::aa {
 
       Element cursor = a;
       a = identity();
-      for (; !reps_left.is_zero(); reps_left >>= 1, this->op_mut(cursor, cursor))
-        if (reps_left & 1)
+      for (; reps_left; reps_left >>= 1, this->op_mut(cursor, cursor)) {
+        if (mpz_odd_p(reps_left.get_mpz_t()))
           this->op_mut(a, cursor);
+      }
     }
 
     virtual ~monoid() = default;
@@ -221,9 +230,9 @@ namespace murk2::aa {
     inline ring_element&& operator/(ring_element const& b)&& { return operator*(b.invert()); }
     inline ring_element& operator/=(ring_element const& b) { return operator*=(b.invert()); }
 
-    inline ring_element operator^(bigint n) const& { return {context, context->ring_mul()->op_iter(elem, n)}; }
-    inline ring_element&& operator^(bigint n)&& { context->ring_mul()->op_iter_mut(elem, n); return std::move(*this); }
-    inline ring_element& operator^=(bigint n) { context->ring_mul()->op_iter_mut(elem, n); return *this; }
+    inline ring_element operator^(bigint const& n) const& { return {context, context->ring_mul()->op_iter(elem, n)}; }
+    inline ring_element&& operator^(bigint const& n)&& { context->ring_mul()->op_iter_mut(elem, n); return std::move(*this); }
+    inline ring_element& operator^=(bigint const& n) { context->ring_mul()->op_iter_mut(elem, n); return *this; }
 
     inline ring_element invert() const& {
       if (auto x = context->ring_mul()->try_invert(elem))
@@ -296,17 +305,17 @@ namespace murk2::aa {
           return base->mul()->op_mut(a, b);
       }
       virtual void op_iter_mut(Element& a, bigint const& reps = 2) const {
-        if (reps.sign() == -1 && base->add()->is_identity(a))
+        if (reps < 0 && base->add()->is_identity(a))
           throw missing_structure{"Tried to invert absorbing element"};
         return base->mul()->op_iter_mut(a, std::move(reps));
       }
       virtual Element op_iter(Element const& a, bigint const& reps = 2) const {
-        if (reps.sign() == -1 && base->add()->is_identity(a))
+        if (reps < 0 && base->add()->is_identity(a))
           throw missing_structure{"Tried to invert absorbing element"};
         return base->mul()->op_iter(a, reps);
       }
       virtual Element op_iter(Element&& a, bigint const& reps = 2) const {
-        if (reps.sign() == -1 && base->add()->is_identity(a))
+        if (reps < 0 && base->add()->is_identity(a))
           throw missing_structure{"Tried to invert absorbing element"};
         return base->mul()->op_iter(a, std::move(reps));
       }
@@ -348,7 +357,11 @@ namespace murk2::aa {
   struct finite_field : public virtual field<Element>, public virtual finite_ring<Element> {
     virtual bigint order_prime() const = 0;
     virtual bigint order_exponent() const = 0;
-    virtual bigint order() const override { return boost::multiprecision::pow(order_prime(), order_exponent().template convert_to<unsigned int>()); }
+    virtual bigint order() const override {
+      bigint ret;
+      mpz_pow_ui(ret, order_prime(), order_exponent().get_ui());
+      return ret;
+    }
     virtual ~finite_field() = default;
   };
 

@@ -51,7 +51,6 @@ namespace murk2::aa {
     bool is_invertible(bigint const&) const override;
     std::optional<bigint> try_invert(bigint const&) const override;
     std::optional<bigint> try_invert(bigint&&) const override;
-    bool try_invert_mut(bigint&) const override;
 
   public:
     mod_mul_monoid(bigint modulus);

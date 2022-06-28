@@ -123,7 +123,7 @@ namespace murk2::aa {
   };
 
   template<typename GroundField>
-  class elliptic_curve_group<GroundField, elliptic_group_type::Finite> : public virtual elliptic_curve_group<GroundField, elliptic_group_type::Generic>, public virtual finite_magma<typename elliptic_curve_group<GroundField>::elem_t> {
+  class elliptic_curve_group<GroundField, elliptic_group_type::Finite> : public virtual elliptic_curve_group<GroundField, elliptic_group_type::Generic>, public virtual finite_monoid<typename elliptic_curve_group<GroundField>::elem_t> {
   public:
     constexpr static elliptic_group_type type = elliptic_group_type::Finite;
 

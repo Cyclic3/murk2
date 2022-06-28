@@ -3,8 +3,9 @@
 #include <murk2/common/err.hpp>
 
 namespace murk2::aa {
+  bigint mod_add_group::canonicalise(bigint&& a) const { return canonicalise_mod(std::move(a), modulus); }
   bigint mod_add_group::op(bigint const& a, bigint const& b) const { return (a + b) % modulus; }
-  void mod_add_group::op_mut(bigint& a, bigint const& b) const { a += b; a %= modulus; }
+  void mod_add_group::op_mut(bigint& a, bigint const& b) const { a = (a+ b) % modulus; }
   bigint mod_add_group::op_iter(bigint const& a, bigint const& reps) const { return (a * reps) % modulus; }
   void mod_add_group::op_iter_mut(bigint& a, bigint const& reps) const { a *= reps; a %= modulus; }
   bigint mod_add_group::identity() const noexcept { return 0; }
@@ -67,6 +68,7 @@ namespace murk2::aa {
   mod_ring::mod_ring(bigint modulus) : add_{modulus}, mul_{std::move(modulus)} {}
 
   void canonicalise_mod_mut(bigint& x, bigint const& modulus) {
+    mpz_mod(x, x, modulus);
     x %= modulus;
     if (x.sign() == -1)
       x += modulus;
@@ -100,6 +102,7 @@ namespace murk2::aa {
     mpz_invert(a, a, modulus);
   }
   bigint mod_mul_prime_group::generator() const { return gen ? *gen : find_primitive_root(modulus); }
+  bigint mod_mul_prime_group::order() const { return modulus - 1; }
   mod_mul_prime_group::mod_mul_prime_group(bigint modulus) : mod_mul_base{std::move(modulus)} {}
   mod_mul_prime_group::mod_mul_prime_group(bigint modulus, bigint mul_generator) : mod_mul_base{std::move(modulus)}, gen{std::move(mul_generator)} {}
 

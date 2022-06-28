@@ -6,8 +6,7 @@
 #include <murk2/aa/elliptic_curve.hpp>
 
 TEST(murk2crypto, Dh) {
-  murk2::aa::mod_mul_prime_group parent_group(13);
-  murk2::aa::cyclic_subgroup group{c3lt::managed{&parent_group}, 2};
+  murk2::aa::mod_mul_prime_group group{13, 2};
   murk2::crypto::diffie_hellman kex{c3lt::managed(&group)};
 
   murk2::bigint priv1 = 3;

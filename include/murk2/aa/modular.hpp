@@ -3,7 +3,7 @@
 #include <murk2/aa/group.hpp>
 
 namespace murk2::aa {
-  class mod_add_group final : public cyclic_group<bigint>, public finite_magma<bigint> {
+  class mod_add_group final : public cyclic_group<bigint>, public finite_monoid<bigint> {
   public:
     bigint modulus;
 
@@ -13,6 +13,7 @@ namespace murk2::aa {
     bigint op_iter(bigint const& a, bigint const& reps = 2) const override;
     void op_iter_mut(bigint& a, bigint const& reps = 2) const override;
 
+    bigint canonicalise(bigint&&) const override;
     bigint identity() const noexcept override;
     bool is_identity(bigint const& i) const noexcept override;
 
@@ -26,7 +27,7 @@ namespace murk2::aa {
     mod_add_group(bigint modulus);
   };
 
-  class mod_mul_base : public virtual monoid<bigint>, public finite_magma<bigint> {
+  class mod_mul_base : public virtual monoid<bigint>, public finite_monoid<bigint> {
   public:
     bigint modulus;
 
@@ -68,6 +69,7 @@ namespace murk2::aa {
     void invert_mut(bigint& a) const override;
 
     bigint generator() const override;
+    bigint order() const override;
 
   public:
     mod_mul_prime_group(bigint modulus);

@@ -11,7 +11,7 @@ add_subdirectory(c3lt)
 
 add_library(murk2 ${lib_source})
 target_include_directories(murk2 PUBLIC include)
-target_link_libraries(murk2 PUBLIC c3lt Threads::Threads gmp)
+target_link_libraries(murk2 PUBLIC c3lt Threads::Threads gmp xxhash)
 #target_precompile_headers(murk2 PUBLIC ${lib_headers})
 
 add_library(murk2::murk2 ALIAS murk2)

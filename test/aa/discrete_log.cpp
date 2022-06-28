@@ -37,4 +37,16 @@ TEST(murk2aa, ModMulPollardRhoDL) {
   EXPECT_EQ(gen*res, target);
 }
 
+TEST(murk2aa, ModMulPollardRhoDL2) {
+  murk2::aa::mod_mul_prime_group group(4941056177, 3);
+  murk2::aa::group_element gen{c3lt::managed(&group), group.generator()};
+  murk2::bigint exponent = group.order() / 2;
+
+  auto target = gen * exponent;
+
+  auto res = murk2::aa::pollard_rho_dl<decltype(group)>(target, f<decltype(group)>);
+
+  EXPECT_EQ(res, exponent);
+  EXPECT_EQ(gen*res, target);
+}
 // TODO: elliptic curve test

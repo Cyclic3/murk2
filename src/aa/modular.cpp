@@ -41,9 +41,7 @@ namespace murk2::aa {
     else
       mpz_powm(a, a, reps, modulus);
   }
-  bool mod_mul_monoid::is_invertible(bigint const& a) const {
-    return do_gmp(mpz_gcd, a, modulus) == 1;
-  }
+  bool mod_mul_monoid::is_invertible(bigint const& a) const { return gcd(a, modulus) == 1; }
   std::optional<bigint> mod_mul_monoid::try_invert(bigint const& a) const {
     bigint ret;
     if (!mpz_invert(ret, a, modulus))

@@ -220,26 +220,39 @@ namespace murk2::aa {
 
   public:
     inline ring_element operator-() const& { return {context, context->add()->invert(elem)}; }
-    inline ring_element&& operator-() && { context->add()->invert_mut(elem); return std::move(*this); }
+    inline ring_element operator-() && { context->add()->invert_mut(elem); return std::move(*this); }
 
-    inline ring_element operator+(ring_element const& b) const& { return {context, context->add()->op(elem, b.elem)}; }
-    inline ring_element&& operator+(ring_element const& b)&& { context->add()->op_mut(elem, b.elem); return std::move(*this); }
-    inline ring_element& operator+=(ring_element const& b) { context->add()->op_mut(elem, b.elem); return *this; }
+    inline ring_element operator+(Element const& b) const& { return {context, context->add()->op(elem, b)}; }
+    inline ring_element operator+(Element const& b)&& { context->add()->op_mut(elem, b); return std::move(*this); }
+    inline ring_element& operator+=(Element const& b) { context->add()->op_mut(elem, b); return *this; }
+    inline ring_element operator+(ring_element const& b) const& { return operator+(b.elem); }
+    inline ring_element operator+(ring_element const& b)&& { return operator+(b.elem); }
+    inline ring_element& operator+=(ring_element const& b) { return operator+(b.elem); }
 
-    inline ring_element operator-(ring_element const& b) const& { return operator+(-b); }
-    inline ring_element&& operator-(ring_element const& b) && { return operator+(-b); }
-    inline ring_element& operator-=(ring_element const& b) { return operator+=(-b); }
+    inline ring_element operator-(Element const& b) const& { return operator+(context->add()->invert(b)); }
+    inline ring_element operator-(Element const& b) && { return operator+(context->add()->invert(b)); }
+    inline ring_element& operator-=(Element const& b) { return operator+=(context->add()->invert(b)); }
+    inline ring_element operator-(ring_element const& b) const& { return operator-(b.elem); }
+    inline ring_element operator-(ring_element const& b) && { return operator-(b.elem); }
+    inline ring_element& operator-=(ring_element const& b) {  return operator-=(b.elem); }
 
-    inline ring_element operator*(ring_element const& b) const& { return {context, context->ring_mul()->op(elem, b.elem)}; }
-    inline ring_element&& operator*(ring_element const& b)&& { context->ring_mul()->op_mut(elem, b.elem); return std::move(*this); }
-    inline ring_element& operator*=(ring_element const& b) { context->ring_mul()->op_mut(elem, b.elem); return *this; }
+    inline ring_element operator*(Element const& b) const& { return {context, context->ring_mul()->op(elem, b)}; }
+    inline ring_element operator*(Element const& b)&& { context->ring_mul()->op_mut(elem, b); return std::move(*this); }
+    inline ring_element& operator*=(Element const& b) { context->ring_mul()->op_mut(elem, b); return *this; }
+    inline ring_element operator*(ring_element const& b) const& { return operator*(b.elem); }
+    inline ring_element operator*(ring_element const& b)&& {return operator*(b.elem); }
+    inline ring_element& operator*=(ring_element const& b) { return operator*=(b.elem); }
 
     inline ring_element operator/(ring_element const& b) const& { return operator*(b.invert()); }
-    inline ring_element&& operator/(ring_element const& b)&& { return operator*(b.invert()); }
+    inline ring_element operator/(ring_element const& b)&& { return operator*(b.invert()); }
     inline ring_element& operator/=(ring_element const& b) { return operator*=(b.invert()); }
 
+    inline ring_element operator&(bigint const& n) const& { return {context, context->add()->op_iter(elem, n)}; }
+    inline ring_element operator&(bigint const& n)&& { context->add()->op_iter_mut(elem, n); return std::move(*this); }
+    inline ring_element& operator&=(bigint const& n) { context->add()->op_iter_mut(elem, n); return *this; }
+
     inline ring_element operator^(bigint const& n) const& { return {context, context->ring_mul()->op_iter(elem, n)}; }
-    inline ring_element&& operator^(bigint const& n)&& { context->ring_mul()->op_iter_mut(elem, n); return std::move(*this); }
+    inline ring_element operator^(bigint const& n)&& { context->ring_mul()->op_iter_mut(elem, n); return std::move(*this); }
     inline ring_element& operator^=(bigint const& n) { context->ring_mul()->op_iter_mut(elem, n); return *this; }
 
     inline ring_element invert() const& {
@@ -274,7 +287,7 @@ namespace murk2::aa {
     inline bool operator==(ring_element<Ring2, Element> const& other) const { return elem == other.elem; }
 
   public:
-    inline ring_element(c3lt::managed<const Ring> context_, Element elem_) : context{context_}, elem{context->add()->canonicalise(std::move(elem_))} {}
+    inline ring_element(c3lt::managed<const Ring> context_, Element elem_) : context{context_}, elem{/*context->add()->canonicalise(*/std::move(elem_)/*)*/} {}
   };
 
   template<typename Ring, typename T>
@@ -371,6 +384,52 @@ namespace murk2::aa {
       return ret;
     }
     virtual ~finite_field() = default;
+  };
+
+  template<typename Monoid>
+  class fake_group : public virtual group<typename Monoid::elem_t> {
+  private:
+    c3lt::managed<const Monoid> parent_monoid;
+
+  public:
+    c3lt::managed<const Monoid> get_parent_group() const noexcept { return parent_monoid; }
+
+  public:
+    virtual typename Monoid::elem_t op(typename Monoid::elem_t const& a, typename Monoid::elem_t const& b) const override { return parent_monoid->op(a, b); }
+    virtual void op_mut(typename Monoid::elem_t& a, typename Monoid::elem_t const& b) const override { return parent_monoid->op_mut(a, b); }
+    virtual void op_iter_mut(typename Monoid::elem_t& a, bigint const& reps = 2) const override{ return parent_monoid->op_iter_mut(a, reps); }
+    virtual typename Monoid::elem_t op_iter(typename Monoid::elem_t const& a, bigint const& reps = 2) const override { return parent_monoid->op_iter(a, reps); }
+
+    virtual typename Monoid::elem_t identity() const override { return parent_monoid->identity(); }
+
+    virtual typename Monoid::elem_t invert(typename Monoid::elem_t const& a) const override {
+      if (auto ret = parent_monoid->try_invert(a))
+        return ret;
+      else
+        throw missing_structure{"Fake group called out"};
+    }
+    virtual void invert_mut(typename Monoid::elem_t& a) const override {
+      if (!parent_monoid->try_invert_mut(a))
+        throw missing_structure{"Fake group called out"};
+    }
+    virtual bool is_inverse(typename Monoid::elem_t const& a, typename Monoid::elem_t const& b) const override { return parent_monoid->is_inverse(a, b); }
+
+  public:
+    fake_group(c3lt::managed<const Monoid> parent) : parent_monoid{parent} {}
+  };
+
+  template<typename Ring>
+  class fake_field : public virtual field<Ring> {
+  private:
+    c3lt::managed<const Ring> base;
+    fake_group<group<typename Ring::elem_t>> fake_mul;
+
+  public:
+    c3lt::managed<const group<typename Ring::elem_t>> add() const noexcept override final { return base->add(); }
+    c3lt::managed<const group<typename Ring::elem_t>> mul() const noexcept override final { return c3lt::managed{&fake_mul}; }
+
+  public:
+    fake_field(c3lt::managed<const Ring> base_ring) : base{base_ring}, fake_mul{base_ring->ring_mul()} {};
   };
 
   /// Used to construct a subgroup from an arbitrary parent group

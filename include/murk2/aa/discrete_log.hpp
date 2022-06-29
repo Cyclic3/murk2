@@ -6,6 +6,8 @@
 #include <murk2/common/simulation.hpp>
 
 namespace murk2::aa {
+  // TODO: check out anomalous and supersingular dlp
+
   // Pollard's rho algorithm for discrete logarithms with Teske's Adding-walk
   //
   //

@@ -5,6 +5,7 @@
 
 #include <murk2/common/simulation.hpp>
 
+#include <numeric>
 #include <cmath>
 #include <chrono>
 #include <map>
@@ -173,5 +174,84 @@ next_curve:{}
     uint64_t b2 = b1 * 100;
 //    std::cout << n_bits << ": " << b1 << std::endl;
     return {b1, b2};
+  }
+
+  factorisation_t trial_division(bigint& num, bigint const& bound) {
+    factorisation_t ret;
+    bigint upper_bound = std::min<bigint>(bound, sqrt(num));
+
+    for (bigint p = 2; p < upper_bound; p = next_prime(p)) {
+      if (num % p == 0) {
+        do {
+          num /= p;
+          ++ret[p];
+        }
+        while (num % p == 0);
+        if (auto new_bound = sqrt(num); new_bound < upper_bound)
+          upper_bound = new_bound;
+      }
+    }
+
+    return ret;
+  }
+
+  factorisation_t trial_division(bigint num) {
+    return trial_division(num, sqrt(num));
+  }
+
+  std::optional<std::pair<bigint, uint64_t>> check_if_power(bigint const& num) {
+    size_t log2_num = mpz_sizeinbase(num, 2);
+    // From bottom means that we return highest power
+    for (size_t i = log2_num; i >= 2; --i) {
+      bigint root = do_gmp(mpz_root, num, i);
+      if (do_gmp(mpz_pow_ui, root, i) == num)
+        return std::pair{std::move(root), i};
+    }
+    return std::nullopt;
+  }
+
+  static void factor_inner(bigint num, factorisation_t& factors, factorisation_t& failed, uint64_t scale) {
+    if (is_prime(num)) {
+      factors[num] += scale;
+      return;
+    }
+
+    if (auto power_res = check_if_power(num))
+      return factor_inner(power_res->first, factors, failed, scale * power_res->second);
+
+    auto n_bits = mpz_sizeinbase(num, 2);
+
+    // If pollard rho is more efficient, do that
+    //
+    // TODO: check this bound
+    if (n_bits < 80) {
+      if (auto factor1 = pollard_rho(num)) {
+        factor_inner(*factor1, factors, failed, scale);
+        factor_inner(bigint{num / *factor1}, factors, failed, scale);
+        return;
+      }
+    }
+
+    if (auto factor1 = lenstra_ecm(num)) {
+      factor_inner(*factor1, factors, failed, scale);
+      factor_inner(bigint{num / *factor1}, factors, failed, scale);
+    }
+
+    failed[num] += scale;
+  }
+
+  factor_results factor(bigint num) {
+    factor_results ret {
+      .factorisation = trial_division(num, 2<<10)
+    };
+
+    factor_inner(num, ret.factorisation, ret.failed, 1);
+
+    return ret;
+  }
+
+  bigint unfactor(factorisation_t const& factors) {
+    return std::accumulate(factors.begin(), factors.end(), bigint{1},
+                           [](bigint const& acc, auto& factor) -> bigint { return acc * do_gmp(mpz_pow_ui, factor.first, factor.second); });
   }
 }

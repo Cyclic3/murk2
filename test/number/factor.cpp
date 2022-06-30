@@ -112,3 +112,22 @@ TEST(murk2number, LenstraECMStop) {
   auto factor_opt = murk2::number::lenstra_ecm(p, 8);
   EXPECT_FALSE(factor_opt);
 }
+
+TEST(murk2number, Factor) {
+  murk2::bigint p{"17"};
+  murk2::bigint q{"50789"};
+  murk2::bigint r{"563594796096133"};
+
+  murk2::bigint n = (p * p * p * p * p) * (q * r) * 2;
+  murk2::number::factorisation_t expected {
+    {2, 1},
+    {p, 5},
+    {q, 1},
+    {r, 1}
+  };
+
+  auto factor_res = murk2::number::factor(n);
+  EXPECT_TRUE(factor_res.failed.empty());
+
+  EXPECT_EQ(factor_res.factorisation, expected);
+}

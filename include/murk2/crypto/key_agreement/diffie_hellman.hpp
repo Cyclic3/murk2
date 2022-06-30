@@ -2,6 +2,7 @@
 
 #include <murk2/crypto/key_agreement/common.hpp>
 
+#include <murk2/aa/discrete_log.hpp>
 #include <murk2/aa/group.hpp>
 
 namespace murk2::crypto {
@@ -23,7 +24,17 @@ namespace murk2::crypto {
     diffie_hellman(c3lt::managed<const CyclicGroup> field_) : field{field_} {}
   };
 
-
   template<typename CyclicGroup>
   diffie_hellman(c3lt::managed<CyclicGroup>) -> diffie_hellman<CyclicGroup>;
+
+  template<typename CyclicGroup>
+   std::optional<aa::group_element<CyclicGroup>> diffie_hellman_crack_secret(aa::group_element<CyclicGroup> pubkey1, aa::group_element<CyclicGroup> pubkey2) {
+     auto dl_opt = discrete_log(pubkey1);
+     if (!dl_opt)
+       return std::nullopt;
+
+     diffie_hellman dh(pubkey1.context);
+
+     return dh.derive_shared(*dl_opt, pubkey2);
+  }
 }

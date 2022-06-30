@@ -21,7 +21,7 @@ namespace murk2 {
 
   public:
     bigint() = default;
-    template<typename... Args>
+    template<typename... Args, bool x = std::enable_if_t<std::is_constructible_v<mpz_class, Args...>, bool>{}>
     inline bigint(Args&&... args) : mpz_class{std::forward<Args>(args)...} {}
   };
 

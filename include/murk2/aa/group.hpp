@@ -1,6 +1,7 @@
 #pragma once
 
 #include <murk2/common/bigint.hpp>
+#include <murk2/common/simulation.hpp>
 
 #include <c3lt.hpp>
 
@@ -469,14 +470,14 @@ namespace murk2::aa {
   public:
     typename Group::elem_t generator() const override final { return gen; }
 
-  public:
-    cyclic_subgroup(c3lt::managed<const Group> parent, typename Group::elem_t generator_element) : subgroup_helper<Group>{parent}, gen{std::move(generator_element)} {}
-    cyclic_subgroup(group_element<Group> generator_element) : subgroup_helper<Group>{generator_element.context}, gen{std::move(generator_element.elem)} {}
-
     inline group_element<cyclic_subgroup> element(group_element<Group> const& elem) const { return {c3lt::managed{this}, elem.elem}; }
     inline group_element<cyclic_subgroup> element(group_element<Group>&& elem) const { return {c3lt::managed{this}, std::move(elem.elem)}; }
     inline group_element<cyclic_subgroup> operator()(group_element<Group> const& elem) const { return {c3lt::managed{this}, elem.elem}; }
     inline group_element<cyclic_subgroup> operator()(group_element<Group>&& elem) const { return {c3lt::managed{this}, std::move(elem.elem)}; }
+
+  public:
+    cyclic_subgroup(c3lt::managed<const Group> parent, typename Group::elem_t generator_element) : subgroup_helper<Group>{parent}, gen{std::move(generator_element)} {}
+    cyclic_subgroup(group_element<Group> generator_element) : subgroup_helper<Group>{generator_element.context}, gen{std::move(generator_element.elem)} {}
   };
   template<typename Group>
   class cyclic_subgroup<Group, true> : public virtual cyclic_subgroup<Group, false>, public virtual finite_monoid<typename Group::elem_t> {
@@ -484,7 +485,12 @@ namespace murk2::aa {
     typename Group::elem_t order_val;
 
   public:
-    typename Group::elem_t order() const override final { return order_val;; }
+    typename Group::elem_t order() const override final { return order_val; }
+
+    inline group_element<cyclic_subgroup> element(group_element<Group> const& elem) const { return {c3lt::managed{this}, elem.elem}; }
+    inline group_element<cyclic_subgroup> element(group_element<Group>&& elem) const { return {c3lt::managed{this}, std::move(elem.elem)}; }
+    inline group_element<cyclic_subgroup> operator()(group_element<Group> const& elem) const { return {c3lt::managed{this}, elem.elem}; }
+    inline group_element<cyclic_subgroup> operator()(group_element<Group>&& elem) const { return {c3lt::managed{this}, std::move(elem.elem)}; }
 
   public:
     cyclic_subgroup(c3lt::managed<const Group> parent, typename Group::elem_t generator_element) : cyclic_subgroup<Group, false>{parent, std::move(generator_element)}, order_val{parent->element_order(this->gen)} {}
@@ -497,4 +503,15 @@ namespace murk2::aa {
   cyclic_subgroup(c3lt::managed<Group>, T) -> cyclic_subgroup<Group, false>;
   template<typename Group>
   cyclic_subgroup(group_element<Group>) -> cyclic_subgroup<Group, false>;
+}
+
+namespace murk2 {
+  template<typename Ring>
+  uint64_t simulation_hash(aa::ring_element<Ring> const& elem) {
+    return murk2::simulation_hash(elem.elem) & murk2::simulation_hash(elem.context.get());
+  }
+  template<typename Group>
+  uint64_t simulation_hash(aa::group_element<Group> const& elem) {
+    return murk2::simulation_hash(elem.elem) & murk2::simulation_hash(elem.context.get());
+  }
 }

@@ -93,3 +93,21 @@ TEST(murk2crypto, EcdhSecp256k1) {
 
   EXPECT_EQ(shared1.elem.finite_point()[0], expected_shared_x);
 }
+
+TEST(murk2crypto, DhCrack) {
+  murk2::aa::mod_mul_prime_group group{13, 2};
+  murk2::crypto::diffie_hellman kex{c3lt::managed(&group)};
+
+  murk2::bigint priv1 = 3;
+  murk2::bigint priv2 = 9;
+
+  auto pub1 = kex.make_pubkey(priv1);
+  auto pub2 = kex.make_pubkey(priv2);
+
+
+  auto shared1 = kex.derive_shared(priv1, pub2);
+  auto shared3 = murk2::crypto::diffie_hellman_crack_secret(pub1, pub2);
+
+  EXPECT_TRUE(shared3);
+  EXPECT_EQ(shared1, *shared3);
+}

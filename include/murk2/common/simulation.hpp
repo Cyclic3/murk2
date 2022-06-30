@@ -23,5 +23,9 @@ namespace murk2 {
     inline ~simulation_rng() { gmp_randclear(state); }
   };
 
-  uint64_t simulation_hash(bigint const& x);
+  uint64_t simulation_hash(bigint const&);
+  template<std::integral T>
+  uint64_t simulation_hash(T const& t) { return simulation_hash(bigint{t}); }
+  template<typename T>
+  uint64_t simulation_hash(T const* t) { return simulation_hash(reinterpret_cast<uintptr_t>(t)); }
 }

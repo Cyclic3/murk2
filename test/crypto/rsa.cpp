@@ -16,6 +16,19 @@ TEST(murk2crypto, RSA) {
   EXPECT_EQ(privkey.exponent, 7);
 }
 
+TEST(murk2crypto, RSACrack) {
+  murk2::bigint p = 3;
+  murk2::bigint q = 11;
+
+  murk2::crypto::rsa rsa;
+
+  auto [pubkey, privkey] = murk2::crypto::derive_rsa_key(p, q, 3, true);
+  auto cracked_privkey_opt = murk2::crypto::crack_key(pubkey);
+  ASSERT_TRUE(cracked_privkey_opt);
+
+  EXPECT_EQ(cracked_privkey_opt->exponent, privkey.exponent);
+}
+
 
 TEST(murk2crypto, RSA2048) {
   murk2::bigint p{"183041381519527082618197165590323097476437239654939254242079007499210106447748113496411210777382744061596816679719488257688320965228815068013703023249603718796353233515160683446887568146688074082930772971214458181926622109390522626258667801652308159687531728999128073927326044750301847660571434646563"};

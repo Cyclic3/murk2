@@ -83,16 +83,16 @@ TEST(murk2number, LenstraECM70) {
   EXPECT_TRUE(factor == p || factor == q) << factor;
 }
 
-TEST(murk2number, LenstraECM100) {
-  murk2::bigint p{"563594796096133"};
-  murk2::bigint q{"122904209049907"};
+//TEST(murk2number, LenstraECM100) {
+//  murk2::bigint p{"563594796096133"};
+//  murk2::bigint q{"122904209049907"};
 
-  auto factor_opt = murk2::number::lenstra_ecm(p * q);
-  ASSERT_TRUE(factor_opt);
+//  auto factor_opt = murk2::number::lenstra_ecm(p * q);
+//  ASSERT_TRUE(factor_opt);
 
-  auto& factor = *factor_opt;
-  EXPECT_TRUE(factor == p || factor == q) << factor;
-}
+//  auto& factor = *factor_opt;
+//  EXPECT_TRUE(factor == p || factor == q) << factor;
+//}
 
 //TEST(murk2number, LenstraECM128) {
 //  murk2::bigint p{"39986299716732592789"};

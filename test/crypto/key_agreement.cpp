@@ -106,8 +106,8 @@ TEST(murk2crypto, DhCrack) {
 
 
   auto shared1 = kex.derive_shared(priv1, pub2);
-  auto shared3 = murk2::crypto::diffie_hellman_crack_secret(pub1, pub2);
+  auto priv1_cracked = murk2::crypto::diffie_hellman_crack(pub1);
 
-  EXPECT_TRUE(shared3);
-  EXPECT_EQ(shared1, *shared3);
+  EXPECT_TRUE(priv1_cracked);
+  EXPECT_EQ(priv1, *priv1_cracked);
 }

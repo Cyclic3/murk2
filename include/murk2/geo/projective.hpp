@@ -83,6 +83,8 @@ namespace murk2::geo {
   template<typename Ring, size_t Dimension>
   class affinisation_coordinate : public std::variant<geo::vector<Ring, Dimension>, point_at_infinity<Ring, Dimension>> {
   public:
+    using variant_t = std::variant<geo::vector<Ring, Dimension>, point_at_infinity<Ring, Dimension>>;
+
     inline bool is_point_at_infinity() const noexcept { return std::holds_alternative<point_at_infinity<Ring, Dimension>>(*this); }
     inline geo::vector<Ring, Dimension>& finite_point() { return std::get<geo::vector<Ring, Dimension>>(*this); }
     inline geo::vector<Ring, Dimension> const& finite_point() const { return std::get<geo::vector<Ring, Dimension>>(*this); }
@@ -124,7 +126,7 @@ namespace murk2::geo {
 
   template<typename Ring, size_t Dimension>
   std::ostream& operator<<(std::ostream& os, affinisation_coordinate<Ring, Dimension> const& coord) {
-    std::visit([&os](auto& x) { os << x; }, coord);
+    std::visit([&os](auto& x) { os << x; }); //, static_cast<typename decltype(coord)::base_t const&>(coord)
     return os;
   }
 }

@@ -9,10 +9,10 @@ namespace murk2 {
     inline int sign() const noexcept { return get_mpz_t()->_mp_size; }
 
   public:
-    constexpr operator bool() const noexcept {
+    inline operator bool() const noexcept {
       return get_mpz_t()->_mp_size != 0;
     }
-    constexpr operator bool() noexcept {
+    inline operator bool() noexcept {
       return get_mpz_t()->_mp_size != 0;
     }
     inline operator mpz_ptr() { return get_mpz_t(); }

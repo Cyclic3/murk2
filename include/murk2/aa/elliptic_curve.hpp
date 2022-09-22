@@ -176,9 +176,10 @@ namespace murk2::aa {
     }
 
     geo::projective_coordinate<GroundRing, 2> identity() const noexcept override { return id; }
-    // If the last coord is zero, then it is the point at infinity (assuming that the point is actually on the curve)
+    // Y^2 * Z = X^3 + a * X * Z^2 + b * Z^3, at infinity (Z == 0):
+    // 0 = X^3
     bool is_identity(geo::projective_coordinate<GroundRing, 2> const& P) const override {
-      return !ground_ring->ring_mul()->is_invertible(P[0]) && !ground_ring->ring_mul()->is_invertible(P[2]);
+      return ground_ring->add()->is_identity(ground_ring->ring_mul()->op_iter(P[2], 3));
     }
 
     // SOURCE: https://en.wikibooks.org/wiki/Cryptography/Prime_Curve/Standard_Projective_Coordinates

@@ -60,8 +60,8 @@ namespace murk2::aa {
     add_.modulus = n;
     mul_.modulus = std::move(n);
   }
-  c3lt::managed<const group<bigint>> mod_ring::add() const noexcept { return c3lt::managed<const group<bigint>>{&add_}; }
-  c3lt::managed<const monoid<bigint>> mod_ring::ring_mul() const noexcept { return c3lt::managed<const monoid<bigint>>{&mul_}; }
+  c3lt::safe_ptr<const group<bigint>> mod_ring::add() const noexcept { return c3lt::managed(&add_); }
+  c3lt::safe_ptr<const monoid<bigint>> mod_ring::ring_mul() const noexcept { return c3lt::managed(&mul_); }
 
   mod_ring::mod_ring(bigint modulus) : add_{modulus}, mul_{std::move(modulus)} {}
 
@@ -104,8 +104,8 @@ namespace murk2::aa {
   mod_mul_prime_group::mod_mul_prime_group(bigint modulus) : mod_mul_base{std::move(modulus)} {}
   mod_mul_prime_group::mod_mul_prime_group(bigint modulus, bigint mul_generator) : mod_mul_base{std::move(modulus)}, gen{std::move(mul_generator)} {}
 
-  c3lt::managed<const group<bigint>> mod_prime_field::add() const noexcept { return c3lt::managed<const group<bigint>>{&add_}; }
-  c3lt::managed<const group<bigint>> mod_prime_field::mul() const noexcept { return c3lt::managed{&mul_}; }
+  c3lt::safe_ptr<const group<bigint>> mod_prime_field::add() const noexcept { return c3lt::managed(&add_); }
+  c3lt::safe_ptr<const group<bigint>> mod_prime_field::mul() const noexcept { return c3lt::managed(&mul_); }
   bigint const& mod_prime_field::get_modulus() const { return add_.modulus; }
   bigint mod_prime_field::order_prime() const { return get_modulus(); }
   bigint mod_prime_field::order_exponent() const { return 1; }

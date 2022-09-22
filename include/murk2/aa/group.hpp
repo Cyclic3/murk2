@@ -130,7 +130,7 @@ namespace murk2::aa {
 
   template<typename Element>
   struct group : virtual monoid<Element> {
-    inline group_element<group<Element>> element(Element elem) const { return group_element{c3lt::managed{this}, std::move(elem)}; }
+    inline group_element<group<Element>> element(Element elem) const { return group_element{c3lt::managed(this), std::move(elem)}; }
     inline group_element<group<Element>> operator()(Element elem) const { return element(std::move(elem)); }
 
     virtual Element invert(Element const& a) const = 0;
@@ -155,7 +155,7 @@ namespace murk2::aa {
   class group_element {
     static_assert(std::derived_from<Group, group<Element>>);
   public:
-    c3lt::managed<const Group> context;
+    c3lt::safe_ptr <const Group> context;
     Element elem;
 
   public:
@@ -179,11 +179,11 @@ namespace murk2::aa {
     inline bool operator==(group_element<Group2, Element> const& other) const { return elem == other.elem; }
 
   public:
-    inline group_element(c3lt::managed<const Group> context_, Element elem_) : context{context_}, elem{context->canonicalise(std::move(elem_))} {}
+    inline group_element(c3lt::safe_ptr <const Group> context_, Element elem_) : context{context_}, elem{context->canonicalise(std::move(elem_))} {}
   };
 
   template<typename Group, typename T>
-  group_element(c3lt::managed<Group>, T) -> group_element<Group, typename Group::elem_t>;
+  group_element(c3lt::safe_ptr <Group>, T) -> group_element<Group, typename Group::elem_t>;
 
   template<typename Group, typename Element>
   inline std::ostream& operator<<(std::ostream& os, group_element<Group, Element> const& x) { return os << x.elem; }
@@ -198,11 +198,13 @@ namespace murk2::aa {
   struct ring {
     using elem_t = Element;
 
-    inline ring_element<ring<Element>> element(Element elem) const { return ring_element{c3lt::managed{this}, std::move(elem)}; }
+    inline ring_element<ring<Element>> element(Element elem) const { return ring_element{c3lt::managed(this), std::move(elem)}; }
     inline ring_element<ring<Element>> operator()(Element elem) const { return element(std::move(elem)); }
 
-    virtual c3lt::managed<const group<Element>> add() const noexcept = 0;
-    virtual c3lt::managed<const monoid<Element>> ring_mul() const noexcept = 0;
+    virtual c3lt::safe_ptr <const group<Element>> add() const noexcept = 0;
+    virtual c3lt::safe_ptr <const monoid<Element>> ring_mul() const noexcept = 0;
+
+    virtual bool is_zero_divisor(elem_t& x);
 
     virtual ~ring() = default;
   };
@@ -216,7 +218,7 @@ namespace murk2::aa {
   class ring_element {
     static_assert(std::derived_from<Ring, ring<Element>>);
   public:
-    c3lt::managed<const Ring> context;
+    c3lt::safe_ptr <const Ring> context;
     Element elem;
 
   public:
@@ -288,11 +290,11 @@ namespace murk2::aa {
     inline bool operator==(ring_element<Ring2, Element> const& other) const { return elem == other.elem; }
 
   public:
-    inline ring_element(c3lt::managed<const Ring> context_, Element elem_) : context{context_}, elem{/*context->add()->canonicalise(*/std::move(elem_)/*)*/} {}
+    inline ring_element(c3lt::safe_ptr <const Ring> context_, Element elem_) : context{context_}, elem{/*context->add()->canonicalise(*/std::move(elem_)/*)*/} {}
   };
 
   template<typename Ring, typename T>
-  ring_element(c3lt::managed<Ring>, T) -> ring_element<Ring, typename Ring::elem_t>;
+  ring_element(c3lt::safe_ptr <Ring>, T) -> ring_element<Ring, typename Ring::elem_t>;
 
   template<typename Field, typename Element = typename Field::elem_t>
   using field_element = ring_element<Field, Element>;
@@ -311,7 +313,7 @@ namespace murk2::aa {
     class mul_monoid final : public monoid<Element> {
     private:
       // TODO: check if optimisation worth stupid thread check over init order
-      c3lt::managed<const field<Element>> base;
+      c3lt::safe_ptr <const field<Element>> base;
 
     public:
       Element op(Element const& a, Element const& b) const {
@@ -354,20 +356,20 @@ namespace murk2::aa {
       virtual Element identity() const { return base->mul()->identity(); }
 
     public:
-      mul_monoid(c3lt::managed<const field> f) : base{f} {}
+      mul_monoid(c3lt::safe_ptr <const field> f) : base{f} {}
     };
 
   private:
     mul_monoid mul_;
 
   public:
-    virtual c3lt::managed<const group<Element>> add() const noexcept override = 0;
-    virtual c3lt::managed<const group<Element>> mul() const noexcept = 0;
+    virtual c3lt::safe_ptr <const group<Element>> add() const noexcept override = 0;
+    virtual c3lt::safe_ptr <const group<Element>> mul() const noexcept = 0;
 
     // TODO: work out how to allow copy/move as well
-    c3lt::managed<const monoid<Element>> ring_mul() const noexcept override final { return c3lt::managed{&mul_}; }
+    c3lt::safe_ptr<const monoid<Element>> ring_mul() const noexcept override final { return c3lt::managed(&mul_); }
 
-    field() : mul_{c3lt::managed{this}} {}
+    field() : mul_{c3lt::managed(this)} {}
     virtual ~field() = default;
 
     // We keep a ref to mul_, so not possible
@@ -390,10 +392,10 @@ namespace murk2::aa {
   template<typename Monoid>
   class fake_group : public virtual group<typename Monoid::elem_t> {
   private:
-    c3lt::managed<const Monoid> parent_monoid;
+    c3lt::safe_ptr <const Monoid> parent_monoid;
 
   public:
-    c3lt::managed<const Monoid> get_parent_group() const noexcept { return parent_monoid; }
+    c3lt::safe_ptr <const Monoid> get_parent_group() const noexcept { return parent_monoid; }
 
   public:
     virtual typename Monoid::elem_t op(typename Monoid::elem_t const& a, typename Monoid::elem_t const& b) const override { return parent_monoid->op(a, b); }
@@ -416,31 +418,31 @@ namespace murk2::aa {
     virtual bool is_inverse(typename Monoid::elem_t const& a, typename Monoid::elem_t const& b) const override { return parent_monoid->is_inverse(a, b); }
 
   public:
-    fake_group(c3lt::managed<const Monoid> parent) : parent_monoid{parent} {}
+    fake_group(c3lt::safe_ptr <const Monoid> parent) : parent_monoid{parent} {}
   };
 
   template<typename Ring>
   class fake_field : public virtual field<Ring> {
   private:
-    c3lt::managed<const Ring> base;
+    c3lt::safe_ptr <const Ring> base;
     fake_group<group<typename Ring::elem_t>> fake_mul;
 
   public:
-    c3lt::managed<const group<typename Ring::elem_t>> add() const noexcept override final { return base->add(); }
-    c3lt::managed<const group<typename Ring::elem_t>> mul() const noexcept override final { return c3lt::managed{&fake_mul}; }
+    c3lt::safe_ptr <const group<typename Ring::elem_t>> add() const noexcept override final { return base->add(); }
+    c3lt::safe_ptr <const group<typename Ring::elem_t>> mul() const noexcept override final { return c3lt::safe_ptr {&fake_mul}; }
 
   public:
-    fake_field(c3lt::managed<const Ring> base_ring) : base{base_ring}, fake_mul{base_ring->ring_mul()} {};
+    fake_field(c3lt::safe_ptr <const Ring> base_ring) : base{base_ring}, fake_mul{base_ring->ring_mul()} {};
   };
 
   /// Used to construct a subgroup from an arbitrary parent group
   template<typename Group>
   class subgroup_helper : public virtual group<typename Group::elem_t> {
   private:
-    c3lt::managed<const Group> parent_group;
+    c3lt::safe_ptr <const Group> parent_group;
 
   public:
-    c3lt::managed<const Group> get_parent_group() const noexcept { return parent_group; }
+    c3lt::safe_ptr <const Group> get_parent_group() const noexcept { return parent_group; }
 
   public:
     virtual typename Group::elem_t op(typename Group::elem_t const& a, typename Group::elem_t const& b) const override { return parent_group->op(a, b); }
@@ -455,7 +457,7 @@ namespace murk2::aa {
     virtual bool is_inverse(typename Group::elem_t const& a, typename Group::elem_t const& b) const override { return parent_group->is_inverse(a, b); }
 
   public:
-    subgroup_helper(c3lt::managed<const Group> parent) : parent_group{parent} {}
+    subgroup_helper(c3lt::safe_ptr <const Group> parent) : parent_group{parent} {}
   };
 
   /// Represents the group generated by an element
@@ -470,13 +472,13 @@ namespace murk2::aa {
   public:
     typename Group::elem_t generator() const override final { return gen; }
 
-    inline group_element<cyclic_subgroup> element(group_element<Group> const& elem) const { return {c3lt::managed{this}, elem.elem}; }
-    inline group_element<cyclic_subgroup> element(group_element<Group>&& elem) const { return {c3lt::managed{this}, std::move(elem.elem)}; }
-    inline group_element<cyclic_subgroup> operator()(group_element<Group> const& elem) const { return {c3lt::managed{this}, elem.elem}; }
-    inline group_element<cyclic_subgroup> operator()(group_element<Group>&& elem) const { return {c3lt::managed{this}, std::move(elem.elem)}; }
+    inline group_element<cyclic_subgroup> element(group_element<Group> const& elem) const { return {c3lt::managed(this), elem.elem}; }
+    inline group_element<cyclic_subgroup> element(group_element<Group>&& elem) const { return {c3lt::managed(this), std::move(elem.elem)}; }
+    inline group_element<cyclic_subgroup> operator()(group_element<Group> const& elem) const { return {c3lt::managed(this), elem.elem}; }
+    inline group_element<cyclic_subgroup> operator()(group_element<Group>&& elem) const { return {c3lt::managed(this), std::move(elem.elem)}; }
 
   public:
-    cyclic_subgroup(c3lt::managed<const Group> parent, typename Group::elem_t generator_element) : subgroup_helper<Group>{parent}, gen{std::move(generator_element)} {}
+    cyclic_subgroup(c3lt::safe_ptr <const Group> parent, typename Group::elem_t generator_element) : subgroup_helper<Group>{parent}, gen{std::move(generator_element)} {}
     cyclic_subgroup(group_element<Group> generator_element) : subgroup_helper<Group>{generator_element.context}, gen{std::move(generator_element.elem)} {}
   };
   template<typename Group>
@@ -487,20 +489,20 @@ namespace murk2::aa {
   public:
     typename Group::elem_t order() const override final { return order_val; }
 
-    inline group_element<cyclic_subgroup> element(group_element<Group> const& elem) const { return {c3lt::managed{this}, elem.elem}; }
-    inline group_element<cyclic_subgroup> element(group_element<Group>&& elem) const { return {c3lt::managed{this}, std::move(elem.elem)}; }
-    inline group_element<cyclic_subgroup> operator()(group_element<Group> const& elem) const { return {c3lt::managed{this}, elem.elem}; }
-    inline group_element<cyclic_subgroup> operator()(group_element<Group>&& elem) const { return {c3lt::managed{this}, std::move(elem.elem)}; }
+    inline group_element<cyclic_subgroup> element(group_element<Group> const& elem) const { return {c3lt::managed(this), elem.elem}; }
+    inline group_element<cyclic_subgroup> element(group_element<Group>&& elem) const { return {c3lt::managed(this), std::move(elem.elem)}; }
+    inline group_element<cyclic_subgroup> operator()(group_element<Group> const& elem) const { return {c3lt::managed(this), elem.elem}; }
+    inline group_element<cyclic_subgroup> operator()(group_element<Group>&& elem) const { return {c3lt::managed(this), std::move(elem.elem)}; }
 
   public:
-    cyclic_subgroup(c3lt::managed<const Group> parent, typename Group::elem_t generator_element) : cyclic_subgroup<Group, false>{parent, std::move(generator_element)}, order_val{parent->element_order(this->gen)} {}
-    cyclic_subgroup(c3lt::managed<const Group> parent, typename Group::elem_t generator_element, bigint order) : cyclic_subgroup<Group, false>{parent, std::move(generator_element)}, order_val{std::move(order)} {}
+    cyclic_subgroup(c3lt::safe_ptr <const Group> parent, typename Group::elem_t generator_element) : cyclic_subgroup<Group, false>{parent, std::move(generator_element)}, order_val{parent->element_order(this->gen)} {}
+    cyclic_subgroup(c3lt::safe_ptr <const Group> parent, typename Group::elem_t generator_element, bigint order) : cyclic_subgroup<Group, false>{parent, std::move(generator_element)}, order_val{std::move(order)} {}
     cyclic_subgroup(group_element<Group> generator_element) : cyclic_subgroup<Group, false>{std::move(generator_element)}, order_val{this->get_parent_group()->element_order(generator_element)} {}
     cyclic_subgroup(group_element<Group> generator_element, bigint order) : cyclic_subgroup<Group, false>{std::move(generator_element)}, order_val{std::move(order)} {}
   };
 
   template<typename Group, typename T>
-  cyclic_subgroup(c3lt::managed<Group>, T) -> cyclic_subgroup<Group, false>;
+  cyclic_subgroup(c3lt::safe_ptr <Group>, T) -> cyclic_subgroup<Group, false>;
   template<typename Group>
   cyclic_subgroup(group_element<Group>) -> cyclic_subgroup<Group, false>;
 }

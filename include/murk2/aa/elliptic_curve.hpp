@@ -23,13 +23,13 @@ namespace murk2::aa {
   class elliptic_curve_group;
 
   template<typename GroundField>
-  elliptic_curve_group(c3lt::managed<const GroundField> ground_field_, typename GroundField::elem_t a, typename GroundField::elem_t b) -> elliptic_curve_group<std::enable_if_t<!std::derived_from<GroundField, finite_ring<typename GroundField::elem_t>>, GroundField>>;
+  elliptic_curve_group(c3lt::safe_ptr <const GroundField> ground_field_, typename GroundField::elem_t a, typename GroundField::elem_t b) -> elliptic_curve_group<std::enable_if_t<!std::derived_from<GroundField, finite_ring<typename GroundField::elem_t>>, GroundField>>;
   template<typename GroundField>
-  elliptic_curve_group(c3lt::managed<GroundField> ground_field_, typename GroundField::elem_t a, typename GroundField::elem_t b) -> elliptic_curve_group<std::enable_if_t<!std::derived_from<GroundField, finite_ring<typename GroundField::elem_t>>, GroundField>>;
+  elliptic_curve_group(c3lt::safe_ptr <GroundField> ground_field_, typename GroundField::elem_t a, typename GroundField::elem_t b) -> elliptic_curve_group<std::enable_if_t<!std::derived_from<GroundField, finite_ring<typename GroundField::elem_t>>, GroundField>>;
   template<typename GroundField, int Dummy1 = 0>
-  elliptic_curve_group(c3lt::managed<const GroundField> ground_field_, typename GroundField::elem_t a, typename GroundField::elem_t b) -> elliptic_curve_group<std::enable_if_t<std::derived_from<GroundField, finite_field<typename GroundField::elem_t>>, GroundField>, elliptic_group_type::Finite>;
+  elliptic_curve_group(c3lt::safe_ptr <const GroundField> ground_field_, typename GroundField::elem_t a, typename GroundField::elem_t b) -> elliptic_curve_group<std::enable_if_t<std::derived_from<GroundField, finite_field<typename GroundField::elem_t>>, GroundField>, elliptic_group_type::Finite>;
   template<typename GroundField, int Dummy1 = 0>
-  elliptic_curve_group(c3lt::managed<GroundField> ground_field_, typename GroundField::elem_t a, typename GroundField::elem_t b) -> elliptic_curve_group<std::enable_if_t<std::derived_from<GroundField, finite_field<typename GroundField::elem_t>>, GroundField>, elliptic_group_type::Finite>;
+  elliptic_curve_group(c3lt::safe_ptr <GroundField> ground_field_, typename GroundField::elem_t a, typename GroundField::elem_t b) -> elliptic_curve_group<std::enable_if_t<std::derived_from<GroundField, finite_field<typename GroundField::elem_t>>, GroundField>, elliptic_group_type::Finite>;
 
   template<typename GroundField>
   class elliptic_curve_group<GroundField, elliptic_group_type::Generic>: public virtual group<geo::affinisation_coordinate<GroundField, 2>> {
@@ -37,7 +37,7 @@ namespace murk2::aa {
     constexpr static elliptic_group_type type = elliptic_group_type::Generic;
 
   private:
-    c3lt::managed<const GroundField> ground_field;
+    c3lt::safe_ptr <const GroundField> ground_field;
     typename GroundField::elem_t A;
     typename GroundField::elem_t B;
     geo::affinisation_coordinate<GroundField, 2> id;
@@ -94,19 +94,19 @@ namespace murk2::aa {
             return op_internal(a, b, grad);
           }
         }
-      }, a, b);
+      }, a.get_variant(), b.get_variant());
     }
 
     geo::affinisation_coordinate<GroundField, 2> identity() const noexcept override { return id; }
     bool is_identity(geo::affinisation_coordinate<GroundField, 2> const& i) const noexcept override { return i.is_point_at_infinity(); }
 
     geo::affinisation_coordinate<GroundField, 2> invert(geo::affinisation_coordinate<GroundField, 2> const& a) const override {
-      return std::visit([this](auto& a) -> geo::affinisation_coordinate<GroundField, 2> {
+      return a.visit([this](auto& a) -> geo::affinisation_coordinate<GroundField, 2> {
         if constexpr (std::same_as<std::remove_cvref_t<decltype(a)>, geo::point_at_infinity<GroundField, 2>>)
           return a;
         else
           return geo::vector{ground_field, std::array{a[0], ground_field->add()->invert(a[1])}};
-      }, a);
+      });
     }
 
     inline auto element(typename GroundField::elem_t x, typename GroundField::elem_t y) const {
@@ -118,7 +118,7 @@ namespace murk2::aa {
     using group<geo::affinisation_coordinate<GroundField, 2>>::operator();
 
   public:
-    elliptic_curve_group(c3lt::managed<const GroundField> ground_field_, typename GroundField::elem_t a, typename GroundField::elem_t b) :
+    elliptic_curve_group(c3lt::safe_ptr <const GroundField> ground_field_, typename GroundField::elem_t a, typename GroundField::elem_t b) :
         ground_field{ground_field_},
         A{std::move(a)},
         B{std::move(b)},
@@ -135,7 +135,7 @@ namespace murk2::aa {
     bigint order() const override { return compute_elliptic_curve_group_order(this->get_A(), this->get_B(), this->get_ground_field().order()); }
 
   public:
-    elliptic_curve_group(c3lt::managed<const GroundField> ground_field, typename GroundField::elem_t a, typename GroundField::elem_t b) : elliptic_curve_group<GroundField, elliptic_group_type::Generic>{ground_field, std::move(a), std::move(b)} {}
+    elliptic_curve_group(c3lt::safe_ptr <const GroundField> ground_field, typename GroundField::elem_t a, typename GroundField::elem_t b) : elliptic_curve_group<GroundField, elliptic_group_type::Generic>{ground_field, std::move(a), std::move(b)} {}
     virtual ~elliptic_curve_group() = default;
   };
 
@@ -147,7 +147,7 @@ namespace murk2::aa {
     using ground_elem_t = typename GroundRing::elem_t;
 
   private:
-    c3lt::managed<const GroundRing> ground_ring;
+    c3lt::safe_ptr <const GroundRing> ground_ring;
     geo::projective_coordinate<GroundRing, 2> id;
     ground_elem_t A;
     ground_elem_t B;
@@ -221,6 +221,7 @@ namespace murk2::aa {
 //          std::cerr << this->A << ", " << this->B << ", " << ground_ring->order() << std::endl;
 
 //          std::cerr << P << " * 2 == " << geo::projective_coordinate<GroundRing, 2>{ground_ring, {X3.elem, Y3.elem, Z3.elem}} << std::endl;
+          std::cout << P << " + " << Q << " == " << geo::projective_coordinate<GroundRing, 2>{ground_ring, {X3.elem, Y3.elem, Z3.elem}}<< std::endl;
 
           return {ground_ring, {std::move(X3.elem), std::move(Y3.elem), std::move(Z3.elem)}};
         }
@@ -255,7 +256,7 @@ namespace murk2::aa {
     using group<geo::projective_coordinate<GroundRing, 2>>::operator();
 
   public:
-    elliptic_curve_proj_group(c3lt::managed<const GroundRing> ground_ring_, typename GroundRing::elem_t a, typename GroundRing::elem_t b) :
+    elliptic_curve_proj_group(c3lt::safe_ptr <const GroundRing> ground_ring_, typename GroundRing::elem_t a, typename GroundRing::elem_t b) :
       ground_ring{ground_ring_},
       A{std::move(a)},
       B{std::move(b)},

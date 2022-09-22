@@ -86,8 +86,8 @@ namespace murk2::aa {
     void set_modulus(bigint n);
 
   public:
-    c3lt::managed<const group<bigint>> add() const noexcept override;
-    c3lt::managed<const monoid<bigint>> ring_mul() const noexcept override;
+    c3lt::safe_ptr<const group<bigint>> add() const noexcept override;
+    c3lt::safe_ptr<const monoid<bigint>> ring_mul() const noexcept override;
 
   public:
     mod_ring(bigint modulus);
@@ -103,8 +103,8 @@ namespace murk2::aa {
     void set_modulus(bigint n);
 
   public:
-    c3lt::managed<const group<bigint>> add() const noexcept override;
-    c3lt::managed<const group<bigint>> mul() const noexcept override;
+    c3lt::safe_ptr<const group<bigint>> add() const noexcept override;
+    c3lt::safe_ptr<const group<bigint>> mul() const noexcept override;
 
     bigint order() const override final;
     bigint order_prime() const override final;

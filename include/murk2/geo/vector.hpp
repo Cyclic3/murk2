@@ -46,10 +46,10 @@ namespace murk2::geo {
     constexpr static size_t dimension = Dimension;
 
   protected:
-    c3lt::managed<const Ring> ring;
+    c3lt::safe_ptr <const Ring> ring;
 
   public:
-    constexpr c3lt::managed<const Ring> get_ring() const noexcept { return ring; }
+    constexpr c3lt::safe_ptr <const Ring> get_ring() const noexcept { return ring; }
     bool is_linearly_dependent(vector const& other) {
       std::optional<bigint> last_ratio;
       for (size_t i = 0; i < Dimension + 1; ++i) {
@@ -82,14 +82,14 @@ namespace murk2::geo {
       std::transform(this->begin(), this->end(), other.begin(), this->begin());
     }
     inline bool operator==(const vector& other) const { return std::equal(this->begin(), this->end(), other.begin()); }
-    inline bool is_zero_vector() const { return std::all_of(this->begin(), this->end(), [this](auto& i) { return ring->add()->is_identity(i); }); }
+    inline virtual bool is_zero_vector() const { return std::all_of(this->begin(), this->end(), [this](auto& i) { return ring->add()->is_identity(i); }); }
 
   public:
-    vector(c3lt::managed<const Ring> ring_, std::array<typename Ring::elem_t, Dimension> coords) : std::array<typename Ring::elem_t, Dimension>{coords}, ring{ring_} {}
+    vector(c3lt::safe_ptr <const Ring> ring_, std::array<typename Ring::elem_t, Dimension> coords) : std::array<typename Ring::elem_t, Dimension>{coords}, ring{ring_} {}
   };
 
   template<typename Ring, size_t Dimension>
-  vector(c3lt::managed<const Ring>, std::array<typename Ring::elem_t, Dimension>) -> vector<Ring, Dimension>;
+  vector(c3lt::safe_ptr <const Ring>, std::array<typename Ring::elem_t, Dimension>) -> vector<Ring, Dimension>;
 
   template<typename Ring, size_t Dimension>
   std::ostream& operator<<(std::ostream& os, vector<Ring, Dimension> const& coord) {

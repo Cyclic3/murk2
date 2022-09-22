@@ -10,7 +10,7 @@ namespace murk2::crypto {
   template<typename CyclicGroup, typename = std::enable_if_t<std::derived_from<CyclicGroup, aa::cyclic_group<typename CyclicGroup::elem_t>>>>
   class diffie_hellman : public key_agreement<aa::group_element<CyclicGroup>, aa::group_element<CyclicGroup>, bigint> {
   public:
-    c3lt::managed<const CyclicGroup> field;
+    c3lt::safe_ptr<const CyclicGroup> field;
 
   public:
     aa::group_element<CyclicGroup> make_pubkey(bigint const& priv) const override {
@@ -21,11 +21,11 @@ namespace murk2::crypto {
     }
 
   public:
-    diffie_hellman(c3lt::managed<const CyclicGroup> field_) : field{field_} {}
+    diffie_hellman(c3lt::safe_ptr<const CyclicGroup> field_) : field{field_} {}
   };
 
   template<typename CyclicGroup>
-  diffie_hellman(c3lt::managed<CyclicGroup>) -> diffie_hellman<CyclicGroup>;
+  diffie_hellman(c3lt::safe_ptr<CyclicGroup>) -> diffie_hellman<CyclicGroup>;
 
   template<typename CyclicGroup>
   std::optional<bigint> diffie_hellman_crack(aa::group_element<CyclicGroup> pubkey) {

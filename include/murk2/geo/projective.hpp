@@ -15,7 +15,7 @@ namespace murk2::geo {
   template<typename Ring, size_t Dimension>
   class point_at_infinity : public geo::vector<Ring, Dimension> {
   public:
-    point_at_infinity(c3lt::managed<const Ring> ring_, std::array<typename Ring::elem_t, Dimension> coords) : geo::vector<Ring, Dimension>{ring_, coords} {}
+    point_at_infinity(c3lt::safe_ptr <const Ring> ring_, std::array<typename Ring::elem_t, Dimension> coords) : geo::vector<Ring, Dimension>{ring_, coords} {}
     point_at_infinity(point_at_infinity const&) = default;
   };
 
@@ -31,6 +31,10 @@ namespace murk2::geo {
     constexpr static size_t dimension = Dimension;
 
   public:
+    inline bool is_zero_vector() const override {
+      return std::all_of(this->begin(), this->end(), [this](auto& i) { return this->ring->ring_mul()->is_zero_divisor(i); });
+    }
+
     affinisation_coordinate<Ring, Dimension> affinise(size_t with_respect_to) {
       std::array<typename Ring::elem_t, Dimension> coords;
 
@@ -59,7 +63,7 @@ namespace murk2::geo {
     }
 
   public:
-    projective_coordinate(c3lt::managed<const ring_t> ring_, std::array<typename Ring::elem_t, Dimension + 1> coords) : geo::vector<Ring, Dimension + 1>{ring_, std::move(coords)} {
+    projective_coordinate(c3lt::safe_ptr <const ring_t> ring_, std::array<typename Ring::elem_t, Dimension + 1> coords) : geo::vector<Ring, Dimension + 1>{ring_, std::move(coords)} {
       if (this->is_zero_vector())
         throw std::invalid_argument{"Zero vector given as projective coordinate"};
     }
@@ -81,22 +85,34 @@ namespace murk2::geo {
 
   // Represents the (potentially infinite) coordinates in the affinisation of a projective space
   template<typename Ring, size_t Dimension>
-  class affinisation_coordinate : public std::variant<geo::vector<Ring, Dimension>, point_at_infinity<Ring, Dimension>> {
+  class affinisation_coordinate {
   public:
     using variant_t = std::variant<geo::vector<Ring, Dimension>, point_at_infinity<Ring, Dimension>>;
 
-    inline bool is_point_at_infinity() const noexcept { return std::holds_alternative<point_at_infinity<Ring, Dimension>>(*this); }
-    inline geo::vector<Ring, Dimension>& finite_point() { return std::get<geo::vector<Ring, Dimension>>(*this); }
-    inline geo::vector<Ring, Dimension> const& finite_point() const { return std::get<geo::vector<Ring, Dimension>>(*this); }
-    inline geo::vector<Ring, Dimension>& infinite_point() { return std::get<point_at_infinity<Ring, Dimension>>(*this); }
-    inline geo::vector<Ring, Dimension> const& infinite_point() const { return std::get<point_at_infinity<Ring, Dimension>>(*this); }
+  private:
+    variant_t value;
+
+  public:
+    constexpr variant_t const& get_variant() const { return value; }
+
+    inline bool is_point_at_infinity() const noexcept { return std::holds_alternative<point_at_infinity<Ring, Dimension>>(value); }
+    inline geo::vector<Ring, Dimension>& finite_point() { return std::get<geo::vector<Ring, Dimension>>(value); }
+    inline geo::vector<Ring, Dimension> const& finite_point() const { return std::get<geo::vector<Ring, Dimension>>(value); }
+    inline geo::vector<Ring, Dimension>& infinite_point() { return std::get<point_at_infinity<Ring, Dimension>>(value); }
+    inline geo::vector<Ring, Dimension> const& infinite_point() const { return std::get<point_at_infinity<Ring, Dimension>>(value); }
+
+    template<typename F>
+    auto visit(F&& f) { return std::visit(f, value); }
+
+    template<typename F>
+    auto visit(F&& f) const { return std::visit(f, value); }
 
     projective_coordinate<Ring, Dimension> projectivise(size_t with_respect_to) {
       std::array<Ring, Dimension + 1> coords;
       if (with_respect_to >= coords.size())
         throw std::out_of_range{"Attempted to projectivise with respect to out of range coordinate"};
 
-      std::visit([this, with_respect_to, &coords](auto const& x) {
+      return std::visit([this, with_respect_to, &coords](auto const& x) -> projective_coordinate<Ring, Dimension> {
         using T = std::remove_cvref_t<decltype(x)>;
         if (with_respect_to == x.size())
           std::copy(x.begin(), x.end(), coords.begin());
@@ -108,25 +124,30 @@ namespace murk2::geo {
           coords[with_respect_to] = this->ring->add()->identity();
         else
           coords[with_respect_to] = this->ring->mul()->identity();
-      }, *this);
 
-      return {this->ring, coords};
+
+
+        return {value->ring, coords};
+      }, value);
     }
 
   public:
-    affinisation_coordinate(c3lt::managed<const Ring> ring, std::array<typename Ring::elem_t, Dimension> coords): std::variant<geo::vector<Ring, Dimension>, point_at_infinity<Ring, Dimension>>{ring, coords} {}
-    affinisation_coordinate(geo::vector<Ring, Dimension> vec): std::variant<geo::vector<Ring, Dimension>, point_at_infinity<Ring, Dimension>>{vec} {}
-    affinisation_coordinate(point_at_infinity<Ring, Dimension> point): std::variant<geo::vector<Ring, Dimension>, point_at_infinity<Ring, Dimension>>{point} {}
+    inline auto operator<=>(affinisation_coordinate const&) const = default;
+
+  public:
+    affinisation_coordinate(c3lt::safe_ptr <const Ring> ring, std::array<typename Ring::elem_t, Dimension> coords): std::variant<geo::vector<Ring, Dimension>, point_at_infinity<Ring, Dimension>>{ring, coords} {}
+    affinisation_coordinate(geo::vector<Ring, Dimension> vec) : value{vec} {}
+    affinisation_coordinate(point_at_infinity<Ring, Dimension> point): value{point} {}
   };
 
   template<typename Ring, size_t Dimension>
   affinisation_coordinate(geo::vector<Ring, Dimension> vec) -> affinisation_coordinate<Ring, Dimension>;
   template<typename Ring, size_t Dimension>
-  affinisation_coordinate(c3lt::managed<const Ring>, std::array<typename Ring::elem_t, Dimension>) -> affinisation_coordinate<Ring, Dimension>;
+  affinisation_coordinate(c3lt::safe_ptr <const Ring>, std::array<typename Ring::elem_t, Dimension>) -> affinisation_coordinate<Ring, Dimension>;
 
   template<typename Ring, size_t Dimension>
   std::ostream& operator<<(std::ostream& os, affinisation_coordinate<Ring, Dimension> const& coord) {
-    std::visit([&os](auto& x) { os << x; }); //, static_cast<typename decltype(coord)::base_t const&>(coord)
+    coord.visit([&os](auto const& x) { os << x; });
     return os;
   }
 }

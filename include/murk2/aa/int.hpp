@@ -35,7 +35,7 @@ namespace murk2::aa {
     static int_mul_monoid mul_;
 
   public:
-    c3lt::managed<const group<bigint>> add() const noexcept override { return c3lt::managed<const group<bigint>>{&add_}; }
-    c3lt::managed<const monoid<bigint>> ring_mul() const noexcept override { return c3lt::managed<const monoid<bigint>>{&mul_}; }
+    c3lt::safe_ptr<const group<bigint>> add() const noexcept override { return c3lt::managed(&add_); }
+    c3lt::safe_ptr<const monoid<bigint>> ring_mul() const noexcept override { return c3lt::managed(&mul_); }
   };
 }
